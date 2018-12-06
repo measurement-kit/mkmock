@@ -24,9 +24,9 @@
 /// }
 /// ````
 ///
-/// When MKMOCK_HOOK_ENABLE is not defined, or defined to false, this
-/// macro expands to nothing. Otherwise, it generates code that you could
-/// use in the unit tests to inject failures in specific code places.
+/// When MKMOCK_HOOK_ENABLE is not defined, this macro expands to
+/// nothing. Otherwise, it generates code that you could use in the
+/// unit tests to inject failures in specific code places.
 #define MKMOCK_HOOK(Tag, Variable)  // Nothing
 
 #else
