@@ -58,8 +58,8 @@
     mkmock_##Tag *inst = mkmock_##Tag::singleton();        \
     std::unique_lock<std::recursive_mutex> _{inst->mutex}; \
     if (inst->enabled) {                                   \
-      if (inst->value != nullptr) {                        \
-        Deleter(inst->value);                              \
+      if (Variable != nullptr) {                           \
+        Deleter(Variable);                                 \
       }                                                    \
       Variable = inst->value;                              \
     }                                                      \
