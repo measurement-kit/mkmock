@@ -34,13 +34,13 @@
 
 // This version of MKMOCK_HOOK allows us to override the value of @p Variable
 // using the mock identified by @p Tag in specific cases.
-#define MKMOCK_HOOK(Tag, Variable)                  \
-  do {                                              \
-    mkmock_##Tag *inst = mkmock_##Tag::singleton(); \
-    std::unique_lock<std::mutex> _{inst->mutex};    \
-    if (inst->enabled) {                            \
-      Variable = inst->value;                       \
-    }                                               \
+#define MKMOCK_HOOK(Tag, Variable)                         \
+  do {                                                     \
+    mkmock_##Tag *inst = mkmock_##Tag::singleton();        \
+    std::unique_lock<std::recursive_mutex> _{inst->mutex}; \
+    if (inst->enabled) {                                   \
+      Variable = inst->value;                              \
+    }                                                      \
   } while (0)
 
 #endif  // !MKMOCK_HOOK_ENABLE
@@ -59,7 +59,7 @@
     Type value = {};                   \
     Type saved_value = {};             \
     std::exception_ptr saved_exc;      \
-    std::mutex mutex;                  \
+    std::recursive_mutex mutex;        \
   }
 
 /// MKMOCK_WITH_ENABKED_HOOK runs @p CodeSnippet with the mock identified by
