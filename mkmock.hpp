@@ -30,6 +30,12 @@
 /// unit tests to inject failures in specific code places.
 #define MKMOCK_HOOK(Tag, Variable)  // Nothing
 
+/// MKMOCK_HOOK_ALLOC is like MKMOCK_HOOK except that it also defines
+/// a deleter to be called to free allocated memory when we want to
+/// make a successful memory allocation look like a failure. Without
+/// using this macro, `asan` will complain about a memory leak.
+#define MKMOCK_HOOK_ALLOC(Tag, Variable, Deleter)  // Nothing
+
 #else
 
 // This version of MKMOCK_HOOK allows us to override the value of @p Variable
@@ -39,6 +45,22 @@
     mkmock_##Tag *inst = mkmock_##Tag::singleton();        \
     std::unique_lock<std::recursive_mutex> _{inst->mutex}; \
     if (inst->enabled) {                                   \
+      Variable = inst->value;                              \
+    }                                                      \
+  } while (0)
+
+// This version of MKMOCK_HOOK allows us to override the value of @p Variable
+// using the mock identified by @p Tag in specific cases. If the memory that
+// has been allocated is non NULL, Deleter will be invoked to clean it before
+// overriding the returned value so that there are no memory leaks.
+#define MKMOCK_HOOK_ALLOC(Tag, Variable, Deleter)          \
+  do {                                                     \
+    mkmock_##Tag *inst = mkmock_##Tag::singleton();        \
+    std::unique_lock<std::recursive_mutex> _{inst->mutex}; \
+    if (inst->enabled) {                                   \
+      if (inst->value != nullptr) {                        \
+        Deleter(inst->value);                              \
+      }                                                    \
       Variable = inst->value;                              \
     }                                                      \
   } while (0)
