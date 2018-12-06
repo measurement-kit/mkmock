@@ -9,6 +9,7 @@
 
 #include <exception>
 #include <mutex>
+#include <utility>
 
 #ifndef MKMOCK_HOOK_ENABLE
 
@@ -56,6 +57,8 @@
                                        \
     bool enabled = false;              \
     Type value = {};                   \
+    Type saved_value = {};             \
+    std::exception_ptr saved_exc;      \
     std::mutex mutex;                  \
   }
 
@@ -64,30 +67,37 @@
 /// macro will disable the mock and set its value back to the old value, even
 /// when @p CodeSnippet throws an exception. Exceptions will be rethrown by
 /// this macro once the previous state has been reset.
-#define MKMOCK_WITH_ENABLED_HOOK(Tag, MockedValue, CodeSnippet) \
-  do {                                                          \
-    mkmock_##Tag *inst = mkmock_##Tag::singleton();             \
-    decltype(inst->value) SavedValue{};                         \
-    {                                                           \
-      std::unique_lock<std::mutex> _{inst->mutex};              \
-      SavedValue = inst->value;                                 \
-      inst->value = MockedValue;                                \
-      inst->enabled = true;                                     \
-    }                                                           \
-    std::exception_ptr saved_exc;                               \
-    try {                                                       \
-      CodeSnippet                                               \
-    } catch (const std::exception &) {                          \
-      saved_exc = std::current_exception();                     \
-    }                                                           \
-    {                                                           \
-      std::unique_lock<std::mutex> _{inst->mutex};              \
-      inst->enabled = false;                                    \
-      inst->value = SavedValue;                                 \
-    }                                                           \
-    if (saved_exc) {                                            \
-      std::rethrow_exception(saved_exc);                        \
-    }                                                           \
+#define MKMOCK_WITH_ENABLED_HOOK(Tag, MockedValue, CodeSnippet)   \
+  /* Implementation note: this macro is written such that it   */ \
+  /* can call itself without triggering compiler warning about */ \
+  /* reusing the same names in a inner scope.                  */ \
+  do {                                                            \
+    {                                                             \
+      mkmock_##Tag *inst = mkmock_##Tag::singleton();             \
+      inst->mutex.lock(); /* Barrier for other threads */         \
+      inst->saved_exc = {};                                       \
+      inst->saved_value = inst->value;                            \
+      inst->value = MockedValue;                                  \
+      inst->enabled = true;                                       \
+    }                                                             \
+    try {                                                         \
+      CodeSnippet                                                 \
+    } catch (const std::exception &) {                            \
+      mkmock_##Tag *inst = mkmock_##Tag::singleton();             \
+      inst->saved_exc = std::current_exception();                 \
+    }                                                             \
+    {                                                             \
+      mkmock_##Tag *inst = mkmock_##Tag::singleton();             \
+      inst->enabled = false;                                      \
+      inst->value = inst->saved_value;                            \
+      inst->saved_value = {};                                     \
+      std::exception_ptr saved_exc;                               \
+      std::swap(saved_exc, inst->saved_exc);                      \
+      inst->mutex.unlock(); /* Allow another thread. */           \
+      if (saved_exc) {                                            \
+        std::rethrow_exception(saved_exc);                        \
+      }                                                           \
+    }                                                             \
   } while (0)
 
 #endif  // MEASUREMENT_KIT_MKMOCK_HPP
