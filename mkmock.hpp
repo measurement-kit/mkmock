@@ -84,7 +84,7 @@
     std::recursive_mutex mutex;        \
   }
 
-/// MKMOCK_WITH_ENABKED_HOOK runs @p CodeSnippet with the mock identified by
+/// MKMOCK_WITH_ENABLED_HOOK runs @p CodeSnippet with the mock identified by
 /// @p Tag enabled and with its value set to @p MockedValue. When leaving this
 /// macro will disable the mock and set its value back to the old value, even
 /// when @p CodeSnippet throws an exception. Exceptions will be rethrown by
