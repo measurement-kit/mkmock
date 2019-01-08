@@ -5,42 +5,32 @@
 #define MEASUREMENT_KIT_MKMOCK_HPP
 
 /// @file mkmock.hpp
-/// This file contains common macro used for testing and mocking.
+///
+/// This file contains common macros used for testing and mocking.
 
 #include <exception>
 #include <mutex>
 #include <utility>
 
-#ifndef MKMOCK_HOOK_ENABLE
+/// MKMOCK_HOOK_DISABLED is a disabled hook for @p Tag and @p Variable.
+#define MKMOCK_HOOK_DISABLED(Tag, Variable)  // Nothing
 
-/// MKMOCK_HOOK provides you a hook to override the value of @p Variable
-/// and identified by the @p Tag unique tag. Use this macro like:
+/// MKMOCK_HOOK_ALLOC_DISABLED is like MKMOCK_HOOK_DISABLED but with
+/// an additional @p Deleter to avoid memory leaks.
+#define MKMOCK_HOOK_ALLOC_DISABLED(Tag, Variable, Deleter)  // Nothing
+
+/// MKMOCK_HOOK_ENABLED provides you a hook to override the value of @p
+/// Variable and identified by the @p Tag unique tag. Use this macro like:
 ///
-/// ```C
+/// ```
 /// int rv = call_some_api();
-/// MKMOCK_HOOK(call_some_api, rv);
+/// MKMOCK_HOOK_ENABLED(call_some_api, rv);
 /// if (rv != 0) {
 ///   // Handle error
 ///   return;
 /// }
 /// ````
-///
-/// When MKMOCK_HOOK_ENABLE is not defined, this macro expands to
-/// nothing. Otherwise, it generates code that you could use in the
-/// unit tests to inject failures in specific code places.
-#define MKMOCK_HOOK(Tag, Variable)  // Nothing
-
-/// MKMOCK_HOOK_ALLOC is like MKMOCK_HOOK except that it also defines
-/// a deleter to be called to free allocated memory when we want to
-/// make a successful memory allocation look like a failure. Without
-/// using this macro, `asan` will complain about a memory leak.
-#define MKMOCK_HOOK_ALLOC(Tag, Variable, Deleter)  // Nothing
-
-#else
-
-// This version of MKMOCK_HOOK allows us to override the value of @p Variable
-// using the mock identified by @p Tag in specific cases.
-#define MKMOCK_HOOK(Tag, Variable)                         \
+#define MKMOCK_HOOK_ENABLED(Tag, Variable)                 \
   do {                                                     \
     mkmock_##Tag *inst = mkmock_##Tag::singleton();        \
     std::unique_lock<std::recursive_mutex> _{inst->mutex}; \
@@ -49,11 +39,11 @@
     }                                                      \
   } while (0)
 
-// This version of MKMOCK_HOOK allows us to override the value of @p Variable
-// using the mock identified by @p Tag in specific cases. If the memory that
-// has been allocated is non NULL, Deleter will be invoked to clean it before
-// overriding the returned value so that there are no memory leaks.
-#define MKMOCK_HOOK_ALLOC(Tag, Variable, Deleter)          \
+/// MKMOCK_HOOK_ALLOC_ENABLED is like MKMOCK_HOOK_ENABLED except that it
+/// uses a @p Deleter to be called to free allocated memory when we want to
+/// make a successful memory allocation look like a failure. Without
+/// using this macro, `asan` will complain about a memory leak.
+#define MKMOCK_HOOK_ALLOC_ENABLED(Tag, Variable, Deleter)  \
   do {                                                     \
     mkmock_##Tag *inst = mkmock_##Tag::singleton();        \
     std::unique_lock<std::recursive_mutex> _{inst->mutex}; \
@@ -64,8 +54,6 @@
       Variable = inst->value;                              \
     }                                                      \
   } while (0)
-
-#endif  // !MKMOCK_HOOK_ENABLE
 
 /// MKMOCK_DEFINE_HOOK defines a hook with tag @p Tag and type @p Type. This
 /// macro should be used in the unit tests source file only.
