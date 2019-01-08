@@ -104,7 +104,7 @@
     }                                                             \
     try {                                                         \
       CodeSnippet                                                 \
-    } catch (const std::exception &) {                            \
+    } catch (...) {                                               \
       mkmock_##Tag *inst = mkmock_##Tag::singleton();             \
       inst->saved_exc = std::current_exception();                 \
     }                                                             \
